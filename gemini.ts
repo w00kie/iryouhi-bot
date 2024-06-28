@@ -27,12 +27,12 @@ if (!apiKey) {
 
 const editInstructions = `
 You will be given a json object with extracted receipt data.
-The user will ask you to edit the data. You save the edited json object to the database.
+The user will ask you to edit the data. You will return the edited json object.
 
 Additional instructions:
-- issue_date should be in the format YYYY-MM-DD
-- total_amount should be an integer
-- bill_type can only be "CONSULTATION", "PRESCRIPTION", or "OTHER"
+- issue_date must be in the format YYYY-MM-DD
+- total_amount must be an integer
+- bill_type can only be "TREATMENT", "PRESCRIPTION", or "OTHER"
 `;
 
 const saveToDatabase: FunctionDeclaration = {
@@ -50,7 +50,7 @@ const saveToDatabase: FunctionDeclaration = {
       total_amount: { type: FunctionDeclarationSchemaType.INTEGER },
       bill_type: {
         type: FunctionDeclarationSchemaType.STRING,
-        enum: ["CONSULTATION", "PRESCRIPTION", "OTHER"],
+        enum: ["TREATMENT", "PRESCRIPTION", "OTHER"],
       },
     },
   },
@@ -58,13 +58,6 @@ const saveToDatabase: FunctionDeclaration = {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
-
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-  systemInstruction: editInstructions,
-  tools: [{ functionDeclarations: [saveToDatabase] }],
-  toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
-});
 
 const generationConfig = {
   temperature: 1,
@@ -74,26 +67,37 @@ const generationConfig = {
   responseMimeType: "application/json",
 };
 
+const model = genAI.getGenerativeModel(
+  {
+    model: "gemini-1.5-flash-latest",
+    systemInstruction: editInstructions,
+    generationConfig: generationConfig,
+    // tools: [{ functionDeclarations: [saveToDatabase] }],
+    // toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
+  },
+  { apiVersion: "v1beta" }
+);
+
 const prompt = `JSON data to edit:
 {
   "patient_name": "ルッコラ 渚苑",
   "vendor_name": "白金歯周歯列矯正クリニック",
   "issue_date": "2024-03-28",
   "total_amount": 780,
-  "bill_type": "CONSULTATION"
+  "bill_type": "TREATMENT"
 }
 
 User Prompt:
-patient name is ルジュテ海老原 史奈`;
+patient name is ルジュテ海老原 史奈 and bill type is taxi`;
 
 async function run() {
-  const result = await model.generateContent([prompt]);
+  const result = await model.generateContent(prompt);
 
   console.log("Response text:", result.response.text());
-  const call = result.response.functionCalls()![0];
-  if (call) {
-    console.log("Function call:", call.args);
-  }
+  // const call = result.response.functionCalls()![0];
+  // if (call) {
+  //   console.log("Function call:", call.args);
+  // }
 }
 
 run();

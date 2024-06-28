@@ -8,6 +8,7 @@ import {
   GoogleAIFileManager,
   type FileMetadataResponse,
 } from "@google/generative-ai/server";
+import { json } from "stream/consumers";
 
 // Set up Gemini API
 const apiKey = process.env.GEMINI_API_KEY;
@@ -28,7 +29,7 @@ The user will give you a picture of a paper receipt in Japanese. You will analyz
 - the date of the receipt formatted as YYYY-MM-DD, as issue_date
 - the total amount in JPY, as an integer, as total_amount
 - the type of receipt, as bill_type, can only be 
-    - "CONSULTATION" for a doctor's visit or hospital treatment
+    - "TREATMENT" for a doctor's visit or hospital treatment
     - "PRESCRIPTION" for a pharmacy purchase
     - "OTHER" for any other type of receipt such as transportation
 
@@ -36,16 +37,25 @@ If the issue date is in Japanese, convert it to YYYY-MM-DD. 令和６年 is 2024
 
 As part of the user prompt, you will receive lists of values used in the past by the user.
 Use them to enhance your character recognition.
+
+Return the extracted data as a json object using this schema:
+{
+  "patient_name": string,
+  "vendor_name": string,
+  "issue_date": string,
+  "total_amount": number,
+  "bill_type": "TREATMENT" | "PRESCRIPTION" | "OTHER"
+}
 `;
 
 const editInstructions = `
 You will be given a json object with extracted receipt data.
-The user will ask you to edit the data. You must save the edited json object to the database.
+The user will ask you to edit the data. You will return the edited json object.
 
 Additional instructions:
-- issue_date should be in the format YYYY-MM-DD
-- total_amount should be an integer
-- bill_type can only be "CONSULTATION", "PRESCRIPTION", or "OTHER"
+- issue_date must be in the format YYYY-MM-DD
+- total_amount must be an integer
+- bill_type can only be "TREATMENT", "PRESCRIPTION", or "OTHER"
 `;
 
 // Model function declarations
@@ -64,7 +74,7 @@ const saveToDatabase: FunctionDeclaration = {
       total_amount: { type: FunctionDeclarationSchemaType.INTEGER },
       bill_type: {
         type: FunctionDeclarationSchemaType.STRING,
-        enum: ["CONSULTATION", "PRESCRIPTION", "OTHER"],
+        enum: ["TREATMENT", "PRESCRIPTION", "OTHER"],
       },
     },
   },
@@ -110,22 +120,23 @@ const generationConfig = {
   topP: 0.95,
   topK: 64,
   maxOutputTokens: 8192,
+  responseMimeType: "application/json",
 };
 
 // Model initialization
 const receiptScanningModel = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-1.5-flash-latest",
   systemInstruction: receiptScanningInstructions,
-  tools: [{ functionDeclarations: [saveToDatabase] }],
-  toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
+  // tools: [{ functionDeclarations: [saveToDatabase] }],
+  // toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
   generationConfig: generationConfig,
 });
 
 const editModel = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-1.5-flash-latest",
   systemInstruction: editInstructions,
-  tools: [{ functionDeclarations: [saveToDatabase] }],
-  toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
+  // tools: [{ functionDeclarations: [saveToDatabase] }],
+  // toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.ANY } },
   generationConfig: generationConfig,
 });
 
@@ -160,12 +171,11 @@ export async function scanReceipt(
     result.response.usageMetadata?.totalTokenCount
   );
 
-  const call = result.response.functionCalls()![0];
-  if (call) {
-    console.log("Function call:", call.args);
-    return call.args as ReceiptData;
-  } else {
-    throw new Error("No function call found in Gemini response");
+  try {
+    return JSON.parse(result.response.text());
+  } catch (error) {
+    console.error("Error parsing JSON from Gemini response:", error);
+    throw new Error("Error parsing JSON from Gemini response");
   }
 }
 
@@ -192,11 +202,10 @@ export async function editReceiptData(
     result.response.usageMetadata?.totalTokenCount
   );
 
-  const call = result.response.functionCalls()![0];
-  if (call) {
-    console.log("Function call:", call.args);
-    return call.args as ReceiptData;
-  } else {
-    throw new Error("No function call found in Gemini response");
+  try {
+    return JSON.parse(result.response.text());
+  } catch (error) {
+    console.error("Error parsing JSON from Gemini response:", error);
+    throw new Error("Error parsing JSON from Gemini response");
   }
 }

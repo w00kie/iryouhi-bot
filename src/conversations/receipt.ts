@@ -3,7 +3,6 @@ import { createConversation } from "@grammyjs/conversations";
 import type { MyContext, MyConversation } from "@/types";
 import { editReceiptData, scanReceipt, type ReceiptData } from "@/lib/gemini";
 import prisma from "@/prismadb";
-import type { Receipt } from "@prisma/client";
 import {
   dateStringToISO,
   generateReceiptsHistory,
@@ -50,10 +49,13 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
     })
   );
 
+  // Send the receipt data as a markdown message
   await ctx.reply(receiptDataToMarkdown(json_receipt), {
     parse_mode: "MarkdownV2",
     reply_markup: inlineKeyboard,
   });
+
+  await ctx.reply("Use the buttons above or tell me what to edit.");
 
   conversation.session.current_receipt = receipt;
 }
@@ -77,11 +79,7 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
     editReceiptData(json_receipt, ctx.message?.text)
   );
 
-  await ctx.reply(receiptDataToMarkdown(json_receipt), {
-    parse_mode: "MarkdownV2",
-    reply_markup: inlineKeyboard,
-  });
-
+  // Update the receipt in the database
   receipt = await conversation.external(() =>
     prisma.receipt.update({
       where: { id: receipt.id },
@@ -96,6 +94,12 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
       },
     })
   );
+
+  // Send the updated receipt data as a markdown message
+  await ctx.reply(receiptDataToMarkdown(json_receipt), {
+    parse_mode: "MarkdownV2",
+    reply_markup: inlineKeyboard,
+  });
 
   conversation.session.current_receipt = receipt;
 }
