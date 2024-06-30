@@ -1,9 +1,11 @@
-import { Bot, GrammyError, HttpError, session } from "grammy";
 import { conversations } from "@grammyjs/conversations";
+import { hydrateFiles } from "@grammyjs/files";
+import { Bot, GrammyError, HttpError, session } from "grammy";
+
+import { myCommands } from "@/commands";
+import ReceiptScanConvo from "@/conversations/receipt";
 import { registerUser } from "@/middleware/user";
 import type { MyContext } from "@/types";
-import ReceiptScanConvo from "@/conversations/receipt";
-import { hydrateFiles } from "@grammyjs/files";
 
 // Load environment variables from .env file
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -25,18 +27,15 @@ bot.api.config.use(hydrateFiles(bot.token));
 // Custom middleware to register users
 bot.use(registerUser);
 
+// Register the commands
+bot.use(myCommands);
 bot.command("whoami", (ctx) =>
-  ctx.reply(
-    `You are ${ctx.from?.username} - ${ctx.from?.id} - DB: ${ctx.session.dbuser?.id}`
-  )
+  ctx.reply(`You are ${ctx.from?.username} - ${ctx.from?.id} - DB: ${ctx.session.dbuser?.id}`),
 );
 
 // Register the receiptScan conversation to start when a photo is received
 bot.use(ReceiptScanConvo);
-bot.on(
-  "message:photo",
-  async (ctx) => await ctx.conversation.enter("receiptScan")
-);
+bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan"));
 
 // Start the bot
 bot.start();
@@ -53,4 +52,5 @@ bot.catch((err) => {
   } else {
     console.error("Unknown error:", e);
   }
+  ctx.reply("An error occurred while processing your request.");
 });

@@ -1,18 +1,14 @@
-import { InlineKeyboard } from "grammy";
 import { createConversation } from "@grammyjs/conversations";
-import type { MyContext, MyConversation } from "@/types";
-import { editReceiptData, scanReceipt, type ReceiptData } from "@/lib/gemini";
+import { InlineKeyboard } from "grammy";
+
+import { editReceiptData, scanReceipt } from "@/lib/openai";
+import { storeReceiptImage } from "@/lib/r2storage";
+import { dateStringToISO, generateReceiptsHistory, receiptDataToMarkdown } from "@/lib/utils";
 import prisma from "@/prismadb";
-import {
-  dateStringToISO,
-  generateReceiptsHistory,
-  receiptDataToMarkdown,
-} from "@/lib/utils";
+import type { MyContext, MyConversation, ReceiptData } from "@/types";
 
 // Define an inline keyboard with two buttons
-const inlineKeyboard = new InlineKeyboard()
-  .text("Save", "/save")
-  .text("Cancel", "/cancel");
+const inlineKeyboard = new InlineKeyboard().text("Save", "/save").text("Cancel", "/cancel");
 
 // Function to process the receipt scan
 async function processScan(conversation: MyConversation, ctx: MyContext) {
@@ -28,25 +24,25 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
   const path = await conversation.external(() => file.download());
   console.log("Receipt file path:", path);
 
-  const history = await generateReceiptsHistory(conversation.session.dbuser.id);
+  const history = await generateReceiptsHistory(user_id);
 
-  const json_receipt = await conversation.external(() =>
-    scanReceipt(path, history)
-  );
+  const [json_receipt, storage_key] = await Promise.all([
+    conversation.external(() => scanReceipt(path, history)),
+    conversation.external(() => storeReceiptImage(path, user_id)),
+  ]);
 
   const receipt = await conversation.external(() =>
     prisma.receipt.create({
       data: {
         user_id: user_id,
+        storage_url: storage_key,
         patient_name: json_receipt.patient_name,
         vendor_name: json_receipt.vendor_name,
-        issue_date: json_receipt.issue_date
-          ? dateStringToISO(json_receipt.issue_date)
-          : null,
+        issue_date: json_receipt.issue_date ? dateStringToISO(json_receipt.issue_date) : null,
         total_amount: json_receipt.total_amount,
         bill_type: json_receipt.bill_type,
       },
-    })
+    }),
   );
 
   // Send the receipt data as a markdown message
@@ -75,9 +71,7 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
     bill_type: receipt.bill_type,
   };
 
-  json_receipt = await conversation.external(() =>
-    editReceiptData(json_receipt, ctx.message?.text)
-  );
+  json_receipt = await conversation.external(() => editReceiptData(json_receipt, ctx.message?.text));
 
   // Update the receipt in the database
   receipt = await conversation.external(() =>
@@ -86,13 +80,11 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
       data: {
         patient_name: json_receipt.patient_name,
         vendor_name: json_receipt.vendor_name,
-        issue_date: json_receipt.issue_date
-          ? dateStringToISO(json_receipt.issue_date)
-          : null,
+        issue_date: json_receipt.issue_date ? dateStringToISO(json_receipt.issue_date) : null,
         total_amount: json_receipt.total_amount,
         bill_type: json_receipt.bill_type,
       },
-    })
+    }),
   );
 
   // Send the updated receipt data as a markdown message
@@ -108,12 +100,9 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
 async function receiptScan(conversation: MyConversation, ctx: MyContext) {
   await processScan(conversation, ctx);
 
-  const response = await conversation.waitForCallbackQuery(
-    ["/save", "/cancel"],
-    {
-      otherwise: async (ctx) => await processEdit(conversation, ctx),
-    }
-  );
+  const response = await conversation.waitForCallbackQuery(["/save", "/cancel"], {
+    otherwise: async (ctx) => await processEdit(conversation, ctx),
+  });
 
   if (!conversation.session.current_receipt) {
     throw new Error("No receipt found in session");

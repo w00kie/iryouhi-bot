@@ -1,14 +1,28 @@
-import type { Context, SessionFlavor } from "grammy";
 import type { Conversation, ConversationFlavor } from "@grammyjs/conversations";
 import type { FileFlavor } from "@grammyjs/files";
-import type { User, Receipt } from "@prisma/client";
+import type { Receipt, User } from "@prisma/client";
+import type { Buffer as ExcelJSBuffer } from "exceljs";
+import type { Context, SessionFlavor } from "grammy";
 
 interface SessionData {
   dbuser?: User;
   current_receipt?: Receipt;
 }
 
-export type MyContext = FileFlavor<
-  Context & SessionFlavor<SessionData> & ConversationFlavor
->;
+export type MyContext = FileFlavor<Context & SessionFlavor<SessionData> & ConversationFlavor>;
 export type MyConversation = Conversation<MyContext>;
+
+export interface ReceiptData {
+  patient_name: string | null;
+  vendor_name: string | null;
+  issue_date: string | null;
+  total_amount: number | null;
+  bill_type: string | null;
+}
+
+export interface ReceiptHistory {
+  patient_names: (string | null)[];
+  vendor_names: (string | null)[];
+}
+
+export type BillType = "PRESCRIPTION" | "TREATMENT" | "OTHER";

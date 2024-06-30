@@ -1,11 +1,9 @@
 import type { NextFunction } from "grammy";
-import type { MyContext } from "../types";
-import prisma from "../prismadb";
 
-export async function registerUser(
-  ctx: MyContext,
-  next: NextFunction
-): Promise<void> {
+import prisma from "../prismadb";
+import type { MyContext } from "../types";
+
+export async function registerUser(ctx: MyContext, next: NextFunction): Promise<void> {
   if (!ctx.from || ctx.session.dbuser) {
     await next();
     return;

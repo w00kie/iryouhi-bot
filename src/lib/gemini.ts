@@ -1,14 +1,7 @@
-import {
-  GoogleGenerativeAI,
-  FunctionDeclarationSchemaType,
-  type FunctionDeclaration,
-  FunctionCallingMode,
-} from "@google/generative-ai";
-import {
-  GoogleAIFileManager,
-  type FileMetadataResponse,
-} from "@google/generative-ai/server";
-import { json } from "stream/consumers";
+import { type FunctionDeclaration, FunctionDeclarationSchemaType, GoogleGenerativeAI } from "@google/generative-ai";
+import { type FileMetadataResponse, GoogleAIFileManager } from "@google/generative-ai/server";
+
+import type { ReceiptData, ReceiptHistory } from "@/types";
 
 // Set up Gemini API
 const apiKey = process.env.GEMINI_API_KEY;
@@ -80,14 +73,6 @@ const saveToDatabase: FunctionDeclaration = {
   },
 };
 
-export interface ReceiptData {
-  patient_name: string | null;
-  vendor_name: string | null;
-  issue_date: string | null;
-  total_amount: number | null;
-  bill_type: string | null;
-}
-
 // Model utility functions for file management
 async function uploadToGemini(path: string, mimeType: string) {
   const uploadResult = await fileManager.uploadFile(path, {
@@ -140,23 +125,13 @@ const editModel = genAI.getGenerativeModel({
   generationConfig: generationConfig,
 });
 
-export interface ReceiptHistory {
-  patient_names: (string | null)[];
-  vendor_names: (string | null)[];
-}
-
 // Function to scan a receipt image
-export async function scanReceipt(
-  path: string,
-  history: ReceiptHistory
-): Promise<ReceiptData> {
+export async function scanReceipt(path: string, history: ReceiptHistory): Promise<ReceiptData> {
   const mimeType = "image/jpeg";
   const files = [await uploadToGemini(path, mimeType)];
   await waitForFilesActive(files);
 
-  const patientList = history.patient_names
-    .map((name) => `- ${name}`)
-    .join("\n");
+  const patientList = history.patient_names.map((name) => `- ${name}`).join("\n");
   const vendorList = history.vendor_names.map((name) => `- ${name}`).join("\n");
   const text_prompt = `Patient names:\n${patientList}\n\nVendor names:\n${vendorList}`;
   console.log("Scan Prompt:", text_prompt);
@@ -166,10 +141,7 @@ export async function scanReceipt(
     text_prompt,
   ]);
 
-  console.log(
-    "Gemini token count:",
-    result.response.usageMetadata?.totalTokenCount
-  );
+  console.log("Gemini token count:", result.response.usageMetadata?.totalTokenCount);
 
   try {
     return JSON.parse(result.response.text());
@@ -180,27 +152,17 @@ export async function scanReceipt(
 }
 
 // Function to edit receipt data
-export async function editReceiptData(
-  data: ReceiptData,
-  userPrompt: string | undefined
-): Promise<ReceiptData> {
+export async function editReceiptData(data: ReceiptData, userPrompt: string | undefined): Promise<ReceiptData> {
   if (!userPrompt) {
     return data;
   }
 
-  const prompt = `JSON data to edit:\n${JSON.stringify(
-    data,
-    null,
-    2
-  )}\n\nUser Prompt:\n${userPrompt}`;
+  const prompt = `JSON data to edit:\n${JSON.stringify(data, null, 2)}\n\nUser Prompt:\n${userPrompt}`;
   console.log("Edit Prompt:", prompt);
 
   const result = await editModel.generateContent(prompt);
 
-  console.log(
-    "Gemini token count:",
-    result.response.usageMetadata?.totalTokenCount
-  );
+  console.log("Gemini token count:", result.response.usageMetadata?.totalTokenCount);
 
   try {
     return JSON.parse(result.response.text());
