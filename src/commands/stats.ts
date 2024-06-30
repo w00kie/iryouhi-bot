@@ -18,7 +18,7 @@ export async function stats(ctx: MyContext): Promise<void> {
     where: { user_id: user.id, processed: true, issue_date: { gte: startDate, lt: endDate } },
   });
 
-  await ctx.reply(`*Receipts Processed:* ${_count.id}\n*Total Amount:* ${_sum.total_amount}`, {
+  await ctx.reply(`*Receipts Processed:* ${_count.id}\n*Total Amount:* ${_sum.total_amount}¥`, {
     parse_mode: "MarkdownV2",
   });
 }
