@@ -7,7 +7,8 @@ import { filePathToBase64String, generateHistoryPrompt } from "./utils";
 const openai = new OpenAI();
 
 const scanPrompt = `
-You are a tax accountant helping users with tallying receipts. 
+You are an advanced Optical Character Recognition (OCR) model designed to accurately read and extract text 
+from images of receipts.
 
 The user will give you a picture of a paper receipt in Japanese. You will analyze the content and extract:
 - the patient's name, as patient_name
@@ -19,8 +20,17 @@ The user will give you a picture of a paper receipt in Japanese. You will analyz
     - "PRESCRIPTION" for a pharmacy purchase
     - "OTHER" for any other type of receipt such as transportation
 
-The user will also provide you with a history of patient and vendor names seen in the past that you can use 
-to enhance your character recognition.
+The user will also provide you with a a database of previously confirmed patient and vendor names. Use this database to 
+correct OCR errors and improve accuracy.
+
+Instructions:
+1.	Extract Text: Extract the patient and vendor names from the receipt image.
+2.	Compare and Correct: Compare the extracted names with the previously confirmed names in the database. 
+If a close match is found, correct the extracted name to match the confirmed name. Use a similarity 
+threshold (e.g., Levenshtein distance or cosine similarity) to determine closeness.
+3.	Contextual Consistency: Ensure that names corrected using the database maintain contextual consistency. For example:
+	•	If “檜口歯科赤坂ガーデンシティ” is extracted but “橋口歯科赤坂ガーデンシティ” is a confirmed name in the database, correct the name to “橋口歯科赤坂ガーデンシティ.”
+	•	If “山口内科クリニック池袋” is extracted and no similar name is found in the database, do not correct it.
 
 Return the extracted data as a json object using this schema:
 {
@@ -30,6 +40,8 @@ Return the extracted data as a json object using this schema:
   "total_amount": number,
   "bill_type": "TREATMENT" | "PRESCRIPTION" | "OTHER"
 }
+
+Additional notes: Always prioritize accuracy and ensure the corrected names are highly likely to be the intended names on the receipt.
 `;
 
 const editPrompt = `
