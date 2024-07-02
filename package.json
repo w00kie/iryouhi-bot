@@ -1,10 +1,9 @@
 {
   "name": "iryouhi-bot",
   "scripts": {
-    "generate": "bunx drizzle-kit generate",
-    "migrate": "bun ./src/migrate.ts",
     "start": "tsx ./src/bot.ts",
-    "gemini-test": "ts-node ./gemini.ts"
+    "migration:dev": "prisma migrate dev",
+    "migration:deploy": "prisma migrate deploy"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
@@ -12,9 +11,7 @@
     "@types/node": "^20.14.2",
     "better-sqlite3": "^11.0.0",
     "bun-types": "^1.1.13",
-    "drizzle-kit": "^0.22.7",
     "prisma": "^5.15.1",
-    "ts-node": "^10.9.2",
     "tsx": "^4.15.7"
   },
   "peerDependencies": {
@@ -26,7 +23,6 @@
     "@grammyjs/conversations": "^1.2.0",
     "@grammyjs/files": "^1.1.1",
     "@prisma/client": "5.15.1",
-    "drizzle-orm": "^0.31.2",
     "exceljs": "^4.4.0",
     "grammy": "^1.24.1",
     "mime": "^4.0.3",
