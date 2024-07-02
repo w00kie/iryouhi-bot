@@ -5,7 +5,7 @@ import type { Buffer as ExcelJSBuffer } from "exceljs";
 import type { Context, SessionFlavor } from "grammy";
 
 interface SessionData {
-  dbuser?: User;
+  dbuser_id?: number;
   current_receipt?: Receipt;
 }
 

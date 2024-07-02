@@ -31,3 +31,10 @@ model Receipt {
   created_at   DateTime @default(now())
   user         User     @relation(fields: [user_id], references: [id])
 }
+
+// Grammy session data
+model Session {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}

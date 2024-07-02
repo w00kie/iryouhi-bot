@@ -1,11 +1,14 @@
 import { conversations } from "@grammyjs/conversations";
 import { hydrateFiles } from "@grammyjs/files";
+import { PrismaAdapter } from "@grammyjs/storage-prisma";
 import { Bot, GrammyError, HttpError, session } from "grammy";
 
 import { myCommands } from "@/commands";
 import ReceiptScanConvo from "@/conversations/receipt";
 import { registerUser } from "@/middleware/user";
 import type { MyContext } from "@/types";
+
+import prisma from "./prismadb";
 
 // Load environment variables from .env file
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -20,7 +23,7 @@ if (!TELEGRAM_TOKEN) {
 const bot = new Bot<MyContext>(TELEGRAM_TOKEN);
 
 // Use the session and conversations middleware
-bot.use(session({ initial: () => ({}) }));
+bot.use(session({ initial: () => ({}), storage: new PrismaAdapter(prisma.session) }));
 bot.use(conversations());
 bot.api.config.use(hydrateFiles(bot.token));
 
@@ -30,7 +33,7 @@ bot.use(registerUser);
 // Register the commands
 bot.use(myCommands);
 bot.command("whoami", (ctx) =>
-  ctx.reply(`You are ${ctx.from?.username} - ${ctx.from?.id} - DB: ${ctx.session.dbuser?.id}`),
+  ctx.reply(`You are ${ctx.from?.username} - ${ctx.from?.id} - DB: ${ctx.session.dbuser_id}`),
 );
 
 // Register the receiptScan conversation to start when a photo is received
@@ -39,6 +42,12 @@ bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan
 
 // Start the bot
 bot.start();
+
+// Catchall for unknown button clicks
+bot.on("callback_query:data", async (ctx) => {
+  console.log("Unknown button event with payload", ctx.callbackQuery.data);
+  await ctx.answerCallbackQuery(); // remove loading animation
+});
 
 // Log errors
 bot.catch((err) => {

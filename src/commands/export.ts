@@ -4,7 +4,7 @@ import { generateExcelFile } from "@/lib/excel";
 import type { MyContext } from "@/types";
 
 export async function exportReceipts(ctx: MyContext): Promise<void> {
-  const user_id = ctx.session.dbuser?.id;
+  const user_id = ctx.session.dbuser_id;
   if (!user_id) {
     await ctx.reply("You are not registered.");
     return;

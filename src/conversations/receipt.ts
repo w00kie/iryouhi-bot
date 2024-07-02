@@ -12,10 +12,10 @@ const inlineKeyboard = new InlineKeyboard().text("Save", "/save").text("Cancel",
 
 // Function to process the receipt scan
 async function processScan(conversation: MyConversation, ctx: MyContext) {
-  if (!conversation.session.dbuser) {
+  if (!conversation.session.dbuser_id) {
     throw new Error("User not registered");
   }
-  const user_id = conversation.session.dbuser.id;
+  const user_id = conversation.session.dbuser_id;
 
   await ctx.reply("Processing receipt...");
 
