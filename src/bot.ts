@@ -67,3 +67,10 @@ bot.catch((err) => {
   }
   ctx.reply("An error occurred while processing your request.");
 });
+
+const server = Bun.serve({
+  port: 3000,
+  fetch(request) {
+    return new Response("ALIVE!");
+  },
+});

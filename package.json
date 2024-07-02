@@ -1,7 +1,7 @@
 {
   "name": "iryouhi-bot",
   "scripts": {
-    "start": "tsx ./src/bot.ts",
+    "start": "bun ./src/bot.ts",
     "migration:dev": "prisma migrate dev",
     "migration:deploy": "prisma migrate deploy"
   },
