@@ -40,6 +40,10 @@ bot.command("whoami", (ctx) =>
 bot.use(ReceiptScanConvo);
 bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan"));
 
+// Stop the bot gracefully
+process.once("SIGINT", () => bot.stop());
+process.once("SIGTERM", () => bot.stop());
+
 // Start the bot
 bot.start();
 
