@@ -41,13 +41,25 @@ bot.command("whoami", (ctx) =>
 bot.use(ReceiptScanConvo);
 bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan"));
 
+// Register list of commands
+bot.api.setMyCommands([
+  { command: "start", description: "Review the welcome message" },
+  { command: "help", description: "Show this help message" },
+  { command: "stats", description: "Show the number of receipts saved and total amount for current year" },
+  {
+    command: "export",
+    description: "Export all receipts for a given year as an Excel file (defaults to current year)",
+  },
+]);
+
 // Start the bot
 bot.start();
 
 const server = Bun.serve({
   port: 3000,
   fetch(request) {
-    return new Response("ALIVE!");
+    const userCount = prisma.user.count();
+    return new Response(`ALIVE!\nUser count: ${userCount}`);
   },
 });
 

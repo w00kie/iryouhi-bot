@@ -10,13 +10,21 @@ export async function exportReceipts(ctx: MyContext): Promise<void> {
     return;
   }
 
-  const year = new Date().getFullYear();
+  let year = new Date().getFullYear();
+
+  const input = ctx.match;
+  if (input) {
+    const input_year = parseInt(input as string);
+    if (isNaN(input_year)) {
+      await ctx.reply(`Invalid input. Defaulting to ${year}.`);
+    } else {
+      year = input_year;
+    }
+  }
 
   await ctx.reply(`Exporting receipts for year ${year}...`);
 
-  const reportUrl = await generateExcelFile(user_id, year);
+  const reportBuffer = await generateExcelFile(user_id, year);
 
-  console.log("Report URL:", reportUrl);
-  // await ctx.replyWithDocument(reportUrl);
-  await ctx.replyWithDocument(new InputFile(reportUrl, `receipts_${year}.xlsx`));
+  await ctx.replyWithDocument(new InputFile(reportBuffer, `receipts_${year}.xlsx`));
 }

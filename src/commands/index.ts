@@ -22,7 +22,8 @@ myCommands.command("help", (ctx) =>
       "/start \\- Review the welcome message\n" +
       "/help \\- Show this help message\n" +
       "/stats \\- Show the number of receipts saved and total amount for current year\n" +
-      "/export \\[YYYY\\] \\- Export all receipts for the given year as an Excel file \\(defaults to current year\\)",
+      "/export \\[YYYY\\] \\- Export all receipts for a given year as an Excel file \\(defaults to current year\\)\n\n" +
+      "To enter a receipt, simply send a photo.",
     { parse_mode: "MarkdownV2" },
   ),
 );
