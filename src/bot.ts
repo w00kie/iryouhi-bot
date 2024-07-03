@@ -2,6 +2,7 @@ import { conversations } from "@grammyjs/conversations";
 import { hydrateFiles } from "@grammyjs/files";
 import { PrismaAdapter } from "@grammyjs/storage-prisma";
 import { Bot, GrammyError, HttpError, session } from "grammy";
+import { exit } from "process";
 
 import { myCommands } from "@/commands";
 import ReceiptScanConvo from "@/conversations/receipt";
@@ -40,12 +41,15 @@ bot.command("whoami", (ctx) =>
 bot.use(ReceiptScanConvo);
 bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan"));
 
-// Stop the bot gracefully
-process.once("SIGINT", () => bot.stop());
-process.once("SIGTERM", () => bot.stop());
-
 // Start the bot
 bot.start();
+
+const server = Bun.serve({
+  port: 3000,
+  fetch(request) {
+    return new Response("ALIVE!");
+  },
+});
 
 // Catchall for unknown button clicks
 bot.on("callback_query:data", async (ctx) => {
@@ -68,9 +72,14 @@ bot.catch((err) => {
   ctx.reply("An error occurred while processing your request.");
 });
 
-const server = Bun.serve({
-  port: 3000,
-  fetch(request) {
-    return new Response("ALIVE!");
-  },
+// Stop the bot gracefully
+process.once("SIGINT", () => {
+  bot.stop();
+  server.stop();
+  exit();
+});
+process.once("SIGTERM", () => {
+  bot.stop();
+  server.stop();
+  exit();
 });
