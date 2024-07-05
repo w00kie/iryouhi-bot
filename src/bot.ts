@@ -63,8 +63,8 @@ bot.start();
 
 const server = Bun.serve({
   port: 3000,
-  fetch(request) {
-    const userCount = prisma.user.count();
+  async fetch(request) {
+    const userCount = await prisma.user.count();
     return new Response(`ALIVE!\nUser count: ${userCount}`);
   },
 });
