@@ -87,6 +87,7 @@ bot.catch((err) => {
   } else {
     console.error("Unknown error:", e);
   }
+  Sentry.captureException(err);
   ctx.reply("An error occurred while processing your request.");
 });
 
