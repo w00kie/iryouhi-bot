@@ -1,6 +1,7 @@
 import { conversations } from "@grammyjs/conversations";
 import { hydrateFiles } from "@grammyjs/files";
 import { PrismaAdapter } from "@grammyjs/storage-prisma";
+import * as Sentry from "@sentry/bun";
 import { Bot, GrammyError, HttpError, session } from "grammy";
 import { exit } from "process";
 
@@ -10,6 +11,11 @@ import { registerUser } from "@/middleware/user";
 import type { MyContext } from "@/types";
 
 import prisma from "./prismadb";
+
+// Setup Sentry error tracking
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN });
+}
 
 // Load environment variables from .env file
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
