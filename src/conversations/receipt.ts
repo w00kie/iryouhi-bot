@@ -27,7 +27,7 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
   const history = await generateReceiptsHistory(user_id);
 
   const [json_receipt, storage_key] = await Promise.all([
-    conversation.external(() => scanReceipt(path, history)),
+    conversation.external(() => scanReceipt(path, history, user_id)),
     conversation.external(() => storeReceiptImage(path, user_id)),
   ]);
 
@@ -58,6 +58,11 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
 
 // Function to process any text edits
 async function processEdit(conversation: MyConversation, ctx: MyContext) {
+  if (!conversation.session.dbuser_id) {
+    throw new Error("User not registered");
+  }
+  const user_id = conversation.session.dbuser_id;
+
   if (!conversation.session.current_receipt) {
     throw new Error("No receipt found in session");
   }
@@ -71,7 +76,7 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
     bill_type: receipt.bill_type,
   };
 
-  json_receipt = await conversation.external(() => editReceiptData(json_receipt, ctx.message?.text));
+  json_receipt = await conversation.external(() => editReceiptData(json_receipt, ctx.message?.text, user_id));
 
   // Update the receipt in the database
   receipt = await conversation.external(() =>

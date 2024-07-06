@@ -11,11 +11,12 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  telegram_id BigInt   @unique
-  username    String?
-  created_at  DateTime @default(now())
-  receipts    Receipt[]
+  id                Int      @id @default(autoincrement())
+  telegram_id       BigInt   @unique
+  username          String?
+  created_at        DateTime @default(now())
+  receipts          Receipt[]
+  token_usage_logs  GenAITokenUsage[]
 }
 
 model Receipt {
@@ -30,6 +31,18 @@ model Receipt {
   processed    Boolean  @default(false)
   created_at   DateTime @default(now())
   user         User     @relation(fields: [user_id], references: [id])
+}
+
+model GenAITokenUsage {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int
+  request_type         String
+  model_name           String   @default("gpt-4o")
+  prompt_tokens        Int
+  completion_tokens    Int
+  total_tokens         Int
+  created_at           DateTime @default(now())
+  user                 User     @relation(fields: [user_id], references: [id])
 }
 
 // Grammy session data

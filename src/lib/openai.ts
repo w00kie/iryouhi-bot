@@ -2,6 +2,7 @@ import OpenAI from "openai";
 
 import type { ReceiptData, ReceiptHistory } from "@/types";
 
+import { logUsage } from "./genAIUsageLog";
 import { filePathToBase64String, generateHistoryPrompt } from "./utils";
 
 const openai = new OpenAI();
@@ -54,7 +55,7 @@ Additional instructions:
 - bill_type can only be "TREATMENT", "PRESCRIPTION", or "OTHER"
 `;
 
-export async function scanReceipt(path: string, history: ReceiptHistory): Promise<ReceiptData> {
+export async function scanReceipt(path: string, history: ReceiptHistory, user_id: number): Promise<ReceiptData> {
   const image_data = filePathToBase64String(path);
   const text_prompt = generateHistoryPrompt(history);
 
@@ -80,6 +81,8 @@ export async function scanReceipt(path: string, history: ReceiptHistory): Promis
     throw new Error("No response from OpenAI");
   }
 
+  await logUsage("receipt_scan", "gpt-4o", response.usage, user_id);
+
   try {
     return JSON.parse(response.choices[0].message.content);
   } catch (error) {
@@ -87,7 +90,11 @@ export async function scanReceipt(path: string, history: ReceiptHistory): Promis
   }
 }
 
-export async function editReceiptData(data: ReceiptData, userPrompt: string | undefined): Promise<ReceiptData> {
+export async function editReceiptData(
+  data: ReceiptData,
+  userPrompt: string | undefined,
+  user_id: number,
+): Promise<ReceiptData> {
   if (!userPrompt) {
     return data;
   }
@@ -112,6 +119,8 @@ export async function editReceiptData(data: ReceiptData, userPrompt: string | un
   if (!response.choices[0].message.content) {
     throw new Error("No response from OpenAI");
   }
+
+  await logUsage("edit_data", "gpt-3.5-turbo", response.usage, user_id);
 
   try {
     return JSON.parse(response.choices[0].message.content);
