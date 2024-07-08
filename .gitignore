@@ -176,4 +176,6 @@ dist
 
 # Databases
 *.db
+*.db-shm
+*.db-wal
 data
