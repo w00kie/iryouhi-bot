@@ -8,9 +8,9 @@ sqlite3 /app/data/prod.db "VACUUM INTO '/tmp/db'"
 gzip /tmp/db
 
 # 1-day, rolling hourly backup
-rclone copy /tmp/db.gz r1:db-hourly-`date +%H`.gz
+rclone copy /tmp/db.gz r2:$R2_STORAGE_BUCKET/db-hourly-`date +%H`.gz
 # 1-month, rolling daily backup
-rclone copy /tmp/db.gz r2:db-daily-`date +%d`.gz
+rclone copy /tmp/db.gz r2:$R2_STORAGE_BUCKET/db-daily-`date +%d`.gz
 
 # Notify dead man that back up completed successfully.
 curl -d s=$? $BACKUP_HEARTBEAT_URL &> /dev/null
