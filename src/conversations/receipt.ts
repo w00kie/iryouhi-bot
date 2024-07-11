@@ -71,7 +71,7 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
   let json_receipt: ReceiptData = {
     patient_name: receipt.patient_name,
     vendor_name: receipt.vendor_name,
-    issue_date: receipt.issue_date!.toISOString().split("T")[0],
+    issue_date: receipt.issue_date?.toISOString().split("T")[0] || null,
     total_amount: receipt.total_amount,
     bill_type: receipt.bill_type,
   };
