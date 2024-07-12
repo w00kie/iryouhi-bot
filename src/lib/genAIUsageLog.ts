@@ -1,6 +1,9 @@
+import Debug from "debug";
 import type { CompletionUsage } from "openai/resources/completions.mjs";
 
 import prisma from "@/prismadb";
+
+const debug = Debug("bot:genAIUsageLog");
 
 export async function logUsage(
   usageType: string,
@@ -9,6 +12,9 @@ export async function logUsage(
   user_id: number,
 ): Promise<void> {
   if (!usage) return;
+
+  debug("%d %s tokens used for %s", usage.total_tokens, modelName, usageType);
+
   await prisma.genAITokenUsage.create({
     data: {
       user_id: user_id,

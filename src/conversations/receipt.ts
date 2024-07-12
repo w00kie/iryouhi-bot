@@ -1,11 +1,15 @@
 import { createConversation } from "@grammyjs/conversations";
+import Debug from "debug";
+import { cp } from "fs";
 import { InlineKeyboard } from "grammy";
 
 import { editReceiptData, scanReceipt } from "@/lib/openai";
 import { storeReceiptImage } from "@/lib/r2storage";
 import { dateStringToISO, generateReceiptsHistory, receiptDataToMarkdown } from "@/lib/utils";
 import prisma from "@/prismadb";
-import type { MyContext, MyConversation, ReceiptData } from "@/types";
+import { type MyContext, type MyConversation, type ReceiptData, ReceiptDataSchema } from "@/types";
+
+const debug = Debug("bot:receipt");
 
 // Define an inline keyboard with two buttons
 const inlineKeyboard = new InlineKeyboard().text("Save", "/save").text("Cancel", "/cancel");
@@ -17,12 +21,13 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
   }
   const user_id = conversation.session.dbuser_id;
 
+  conversation.external(() => debug("Starting conversation with user %d", user_id));
+
   await ctx.reply("Processing receipt...");
 
   const file = await ctx.getFile();
   if (!file) throw new Error("No file found in the message");
   const path = await conversation.external(() => file.download());
-  console.log("Receipt file path:", path);
 
   const history = await generateReceiptsHistory(user_id);
 
@@ -38,12 +43,14 @@ async function processScan(conversation: MyConversation, ctx: MyContext) {
         storage_url: storage_key,
         patient_name: json_receipt.patient_name,
         vendor_name: json_receipt.vendor_name,
-        issue_date: json_receipt.issue_date ? dateStringToISO(json_receipt.issue_date) : null,
+        issue_date: json_receipt.issue_date,
         total_amount: json_receipt.total_amount,
         bill_type: json_receipt.bill_type,
       },
     }),
   );
+
+  conversation.external(() => debug("Receipt %d processed for user %d", receipt.id, user_id));
 
   // Send the receipt data as a markdown message
   await ctx.reply(receiptDataToMarkdown(json_receipt), {
@@ -68,13 +75,9 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
   }
   let receipt = conversation.session.current_receipt;
 
-  let json_receipt: ReceiptData = {
-    patient_name: receipt.patient_name,
-    vendor_name: receipt.vendor_name,
-    issue_date: receipt.issue_date?.toISOString().split("T")[0] || null,
-    total_amount: receipt.total_amount,
-    bill_type: receipt.bill_type,
-  };
+  conversation.external(() => debug("User %d requesting edit for receipt %d", user_id, receipt.id));
+
+  let json_receipt = ReceiptDataSchema.parse(receipt);
 
   json_receipt = await conversation.external(() => editReceiptData(json_receipt, ctx.message?.text, user_id));
 
@@ -85,12 +88,14 @@ async function processEdit(conversation: MyConversation, ctx: MyContext) {
       data: {
         patient_name: json_receipt.patient_name,
         vendor_name: json_receipt.vendor_name,
-        issue_date: json_receipt.issue_date ? dateStringToISO(json_receipt.issue_date) : null,
+        issue_date: json_receipt.issue_date,
         total_amount: json_receipt.total_amount,
         bill_type: json_receipt.bill_type,
       },
     }),
   );
+
+  conversation.external(() => debug("Receipt %d edited for user %d", receipt.id, user_id));
 
   // Send the updated receipt data as a markdown message
   await ctx.reply(receiptDataToMarkdown(json_receipt), {
@@ -114,18 +119,25 @@ async function receiptScan(conversation: MyConversation, ctx: MyContext) {
   }
 
   if (response.match === "/save") {
-    await ctx.reply("Receipt saved!");
+    conversation.external(() => debug("Saving receipt %d", conversation.session.current_receipt?.id));
+
     await prisma.receipt.update({
       where: { id: conversation.session.current_receipt.id },
       data: { processed: true },
     });
+
+    await ctx.reply("Receipt saved!");
     return;
   }
+
   if (response.match === "/cancel") {
-    await ctx.reply("Receipt discarded!");
+    conversation.external(() => debug("Discarding receipt %d", conversation.session.current_receipt?.id));
+
     await prisma.receipt.delete({
       where: { id: conversation.session.current_receipt.id },
     });
+
+    await ctx.reply("Receipt discarded!");
     return;
   }
 }

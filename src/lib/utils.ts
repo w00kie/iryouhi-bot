@@ -12,7 +12,7 @@ export function receiptDataToMarkdown(data: ReceiptData): string {
   return `
 *Patient name*: ${data.patient_name}
 *Vendor name*: ${data.vendor_name}
-*Issue date*: ${data.issue_date ? data.issue_date.replaceAll("-", "\\-") : ""}
+*Issue date*: ${data.issue_date.toISOString().split("T")[0].replaceAll("-", "\\-")}
 *Total amount*: ${data.total_amount}¥
 *Bill type*: ${data.bill_type}
 `;
@@ -21,12 +21,12 @@ export function receiptDataToMarkdown(data: ReceiptData): string {
 export async function generateReceiptsHistory(user_id: number): Promise<ReceiptHistory> {
   const patient_names = await prisma.receipt.findMany({
     select: { patient_name: true },
-    where: { user_id: user_id, patient_name: { not: null }, processed: true },
+    where: { user_id: user_id, processed: true },
     distinct: ["patient_name"],
   });
   const vendor_names = await prisma.receipt.findMany({
     select: { vendor_name: true },
-    where: { user_id: user_id, vendor_name: { not: null }, processed: true },
+    where: { user_id: user_id, processed: true },
     distinct: ["vendor_name"],
   });
 

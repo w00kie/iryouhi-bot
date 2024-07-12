@@ -1,9 +1,12 @@
+import Debug from "debug";
 import OpenAI from "openai";
 
-import type { ReceiptData, ReceiptHistory } from "@/types";
+import { type ReceiptData, ReceiptDataSchema, type ReceiptHistory } from "@/types";
 
 import { logUsage } from "./genAIUsageLog";
 import { filePathToBase64String, generateHistoryPrompt } from "./utils";
+
+const debug = Debug("openai");
 
 const openai = new OpenAI();
 
@@ -56,6 +59,8 @@ Additional instructions:
 `;
 
 export async function scanReceipt(path: string, history: ReceiptHistory, user_id: number): Promise<ReceiptData> {
+  debug("Scanning receipt for user %d", user_id);
+
   const image_data = filePathToBase64String(path);
   const text_prompt = generateHistoryPrompt(history);
 
@@ -77,6 +82,8 @@ export async function scanReceipt(path: string, history: ReceiptHistory, user_id
     ],
   });
 
+  debug("Received response from OpenAI for user %d", user_id);
+
   if (!response.choices[0].message.content) {
     throw new Error("No response from OpenAI");
   }
@@ -84,8 +91,9 @@ export async function scanReceipt(path: string, history: ReceiptHistory, user_id
   await logUsage("receipt_scan", "gpt-4o", response.usage, user_id);
 
   try {
-    return JSON.parse(response.choices[0].message.content);
+    return ReceiptDataSchema.parse(JSON.parse(response.choices[0].message.content));
   } catch (error) {
+    debug("Error parsing response from OpenAI: %O", error);
     throw new Error("Invalid response from OpenAI");
   }
 }
@@ -98,6 +106,8 @@ export async function editReceiptData(
   if (!userPrompt) {
     return data;
   }
+
+  debug("Editing receipt data for user %d", user_id);
 
   const prompt = `JSON data to edit:\n${JSON.stringify(data, null, 2)}\n\nUser Prompt:\n${userPrompt}`;
 
@@ -116,6 +126,8 @@ export async function editReceiptData(
     ],
   });
 
+  debug("Received response from OpenAI for user %d", user_id);
+
   if (!response.choices[0].message.content) {
     throw new Error("No response from OpenAI");
   }
@@ -123,8 +135,9 @@ export async function editReceiptData(
   await logUsage("edit_data", "gpt-3.5-turbo", response.usage, user_id);
 
   try {
-    return JSON.parse(response.choices[0].message.content);
+    return ReceiptDataSchema.parse(JSON.parse(response.choices[0].message.content));
   } catch (error) {
+    debug("Error parsing response from OpenAI: %O", error);
     throw new Error("Invalid response from OpenAI");
   }
 }
