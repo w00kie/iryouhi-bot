@@ -112,7 +112,7 @@ export async function editReceiptData(
   const prompt = `JSON data to edit:\n${JSON.stringify(data, null, 2)}\n\nUser Prompt:\n${userPrompt}`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [
       {
