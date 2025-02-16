@@ -31,6 +31,10 @@ model Receipt {
   processed    Boolean  @default(false)
   created_at   DateTime @default(now())
   user         User     @relation(fields: [user_id], references: [id])
+  
+  @@index([user_id, processed, issue_date])
+  @@index([user_id, processed, patient_name])
+  @@index([user_id, processed, vendor_name])
 }
 
 model GenAITokenUsage {
