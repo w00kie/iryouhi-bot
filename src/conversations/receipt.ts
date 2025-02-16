@@ -1,13 +1,12 @@
 import { createConversation } from "@grammyjs/conversations";
 import Debug from "debug";
-import { cp } from "fs";
 import { InlineKeyboard } from "grammy";
 
 import { editReceiptData, scanReceipt } from "@/lib/openai";
 import { storeReceiptImage } from "@/lib/r2storage";
-import { dateStringToISO, generateReceiptsHistory, receiptDataToMarkdown } from "@/lib/utils";
+import { generateReceiptsHistory, receiptDataToMarkdown } from "@/lib/utils";
 import prisma from "@/prismadb";
-import { type MyContext, type MyConversation, type ReceiptData, ReceiptDataSchema } from "@/types";
+import { type MyContext, type MyConversation, ReceiptDataSchema } from "@/types";
 
 const debug = Debug("bot:receipt");
 
