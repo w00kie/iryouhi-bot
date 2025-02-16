@@ -132,7 +132,7 @@ export async function editReceiptData(
     throw new Error("No response from OpenAI");
   }
 
-  await logUsage("edit_data", "gpt-3.5-turbo", response.usage, user_id);
+  await logUsage("edit_data", "gpt-4o-mini", response.usage, user_id);
 
   try {
     return ReceiptDataSchema.parse(JSON.parse(response.choices[0].message.content));
