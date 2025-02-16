@@ -1,6 +1,7 @@
 {
   "name": "iryouhi-bot",
   "scripts": {
+    "dev": "concurrently \"bun ./src/bot.ts\" \"ngrok http 3000\"",
     "start": "bun ./src/bot.ts",
     "start:prod": "bun ./src/bot.ts",
     "migration:dev": "prisma migrate dev",
@@ -11,27 +12,29 @@
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/bun": "latest",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.14.2",
-    "bun-types": "^1.1.13",
-    "prisma": "^5.15.1",
-    "tsx": "^4.15.7"
+    "@types/node": "^20.17.19",
+    "bun-types": "^1.2.2",
+    "concurrently": "^9.1.2",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2"
   },
   "peerDependencies": {
     "typescript": "^5.5.2"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.600.0",
-    "@google/generative-ai": "^0.14.0",
+    "@aws-sdk/client-s3": "^3.749.0",
+    "@google/generative-ai": "^0.14.1",
     "@grammyjs/conversations": "^1.2.0",
     "@grammyjs/files": "^1.1.1",
-    "@grammyjs/storage-prisma": "^2.4.2",
+    "@grammyjs/storage-free": "^2.4.2",
     "@prisma/client": "5.15.1",
-    "@sentry/bun": "^8.14.0",
-    "debug": "^4.3.5",
+    "@sentry/bun": "^8.55.0",
+    "debug": "^4.4.0",
     "exceljs": "^4.4.0",
-    "grammy": "^1.26.0",
-    "mime": "^4.0.3",
-    "openai": "^4.52.1",
-    "zod": "^3.23.8"
+    "grammy": "^1.35.0",
+    "hono": "^4.7.1",
+    "mime": "^4.0.6",
+    "openai": "^4.85.1",
+    "zod": "^3.24.2"
   }
 }

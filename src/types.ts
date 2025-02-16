@@ -1,11 +1,10 @@
 import type { Conversation, ConversationFlavor } from "@grammyjs/conversations";
 import type { FileFlavor } from "@grammyjs/files";
-import type { Receipt, User } from "@prisma/client";
-import type { Buffer as ExcelJSBuffer } from "exceljs";
+import type { Receipt } from "@prisma/client";
 import type { Context, SessionFlavor } from "grammy";
 import { z } from "zod";
 
-interface SessionData {
+export interface SessionData {
   dbuser_id?: number;
   current_receipt?: Receipt;
 }
@@ -21,11 +20,25 @@ export const ReceiptDataSchema = z.object({
   bill_type: z.enum(["PRESCRIPTION", "TREATMENT", "OTHER"]),
 });
 
+export const FullReceiptSchema = ReceiptDataSchema.extend({ storage_url: z.string() });
+
+export const FullReceiptArraySchema = z.array(FullReceiptSchema);
+
 export type BillType = z.infer<typeof ReceiptDataSchema>["bill_type"];
 
 export type ReceiptData = z.infer<typeof ReceiptDataSchema>;
 
+export type FullReceipt = z.infer<typeof FullReceiptSchema>;
+
 export interface ReceiptHistory {
   patient_names: (string | null)[];
   vendor_names: (string | null)[];
+}
+
+export interface BundlerPayload {
+  archive_filename: string;
+  files: {
+    r2key: string;
+    filename: string;
+  }[];
 }

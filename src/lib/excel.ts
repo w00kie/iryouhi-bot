@@ -5,6 +5,7 @@ import prisma from "@/prismadb";
 import type { BillType } from "@/types";
 
 import { storeReportFile } from "./r2storage";
+import { getReceiptsForYear } from "./utils";
 
 const WORKSHEET_INDEX = 1;
 const START_ROW = 9;
@@ -30,12 +31,7 @@ function getBillTypeColumn(bill_type: string | null) {
 }
 
 export async function generateExcelFile(user_id: number, year: number): Promise<Buffer> {
-  const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year + 1, 0, 1);
-
-  const receipts = await prisma.receipt.findMany({
-    where: { user_id, processed: true, issue_date: { gte: startDate, lt: endDate } },
-  });
+  const receipts = await getReceiptsForYear(user_id, year);
 
   const workbook = new ExcelJS.Workbook();
   const templatePath = path.join(__dirname, "template", "iryouhi_form_v3.xlsx");

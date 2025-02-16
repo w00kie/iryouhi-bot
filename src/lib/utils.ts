@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import fs from "fs";
 
 import prisma from "@/prismadb";
-import type { ReceiptData, ReceiptHistory } from "@/types";
+import { type FullReceipt, FullReceiptArraySchema, type ReceiptData, type ReceiptHistory } from "@/types";
 
 export function dateStringToISO(dateString: string): string {
   return new Date(dateString).toISOString();
@@ -50,6 +50,17 @@ export function generateHistoryPrompt(history: ReceiptHistory): string {
   const patientList = history.patient_names.map((name) => `- ${name}`).join("\n");
   const vendorList = history.vendor_names.map((name) => `- ${name}`).join("\n");
   return `Patient names:\n${patientList}\n\nVendor names:\n${vendorList}`;
+}
+
+export function getReceiptsForYear(user_id: number, year: number): Promise<FullReceipt[]> {
+  const startDate = new Date(year, 0, 1);
+  const endDate = new Date(year + 1, 0, 1);
+
+  return FullReceiptArraySchema.parseAsync(
+    prisma.receipt.findMany({
+      where: { user_id, processed: true, issue_date: { gte: startDate, lt: endDate } },
+    }),
+  );
 }
 
 // Function to generate a random string

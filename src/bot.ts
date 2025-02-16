@@ -1,14 +1,15 @@
 import { conversations } from "@grammyjs/conversations";
 import { hydrateFiles } from "@grammyjs/files";
-import { PrismaAdapter } from "@grammyjs/storage-prisma";
+import { freeStorage } from "@grammyjs/storage-free";
 import * as Sentry from "@sentry/bun";
-import { Bot, GrammyError, HttpError, session } from "grammy";
+import { Bot, GrammyError, HttpError, session, webhookCallback } from "grammy";
+import { Hono } from "hono";
 import { exit } from "process";
 
 import { myCommands } from "@/commands";
 import ReceiptScanConvo from "@/conversations/receipt";
 import { registerUser } from "@/middleware/user";
-import type { MyContext } from "@/types";
+import type { MyContext, SessionData } from "@/types";
 
 import prisma from "./prismadb";
 
@@ -30,7 +31,7 @@ if (!TELEGRAM_TOKEN) {
 const bot = new Bot<MyContext>(TELEGRAM_TOKEN);
 
 // Use the session and conversations middleware
-bot.use(session({ initial: () => ({}), storage: new PrismaAdapter(prisma.session) }));
+bot.use(session({ initial: () => ({}), storage: freeStorage<SessionData>(bot.token) }));
 bot.use(conversations());
 bot.api.config.use(hydrateFiles(bot.token));
 
@@ -58,15 +59,23 @@ bot.api.setMyCommands([
   },
 ]);
 
-// Start the bot
-bot.start();
+// Setup webhook mode
+if (!process.env.WEBHOOK_URL) {
+  console.error("WEBHOOK_URL environment variable must be provided!");
+  process.exit(1);
+}
+const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
+await bot.api.setWebhook(webhookUrl);
+console.log(`Webhook registered at ${webhookUrl}`);
 
-const server = Bun.serve({
-  port: 3000,
-  async fetch(request) {
-    const userCount = await prisma.user.count();
-    return new Response(`ALIVE!\nUser count: ${userCount}`);
-  },
+// Serve the webhook with Hono
+const app = new Hono();
+
+app.use("/webhook", webhookCallback(bot, "hono"));
+
+app.get("/", async (c) => {
+  const userCount = await prisma.user.count();
+  return c.text(`ALIVE!\nUser count: ${userCount}`);
 });
 
 // Catchall for unknown button clicks
@@ -94,11 +103,12 @@ bot.catch((err) => {
 // Stop the bot gracefully
 process.once("SIGINT", () => {
   bot.stop();
-  server.stop();
   exit();
 });
 process.once("SIGTERM", () => {
   bot.stop();
-  server.stop();
   exit();
 });
+
+// Export the Hono webserver for Cloudflare Workers
+export default app;
