@@ -1,15 +1,14 @@
 import { conversations } from "@grammyjs/conversations";
 import { hydrateFiles } from "@grammyjs/files";
-import { freeStorage } from "@grammyjs/storage-free";
 import * as Sentry from "@sentry/bun";
-import { Bot, GrammyError, HttpError, session, webhookCallback } from "grammy";
+import { Bot, GrammyError, HttpError, MemorySessionStorage, session, webhookCallback } from "grammy";
 import { Hono } from "hono";
 import { exit } from "process";
 
 import { myCommands } from "@/commands";
 import ReceiptScanConvo from "@/conversations/receipt";
 import { registerUser } from "@/middleware/user";
-import type { MyContext, SessionData } from "@/types";
+import type { MyContext } from "@/types";
 
 import prisma from "./prismadb";
 
@@ -31,7 +30,7 @@ if (!TELEGRAM_TOKEN) {
 const bot = new Bot<MyContext>(TELEGRAM_TOKEN);
 
 // Use the session and conversations middleware
-bot.use(session({ initial: () => ({}), storage: freeStorage<SessionData>(bot.token) }));
+bot.use(session({ initial: () => ({}), storage: new MemorySessionStorage() }));
 bot.use(conversations());
 bot.api.config.use(hydrateFiles(bot.token));
 
@@ -76,6 +75,11 @@ app.use("/webhook", webhookCallback(bot, "hono"));
 app.get("/", async (c) => {
   const userCount = await prisma.user.count();
   return c.text(`ALIVE!\nUser count: ${userCount}`);
+});
+
+app.onError((e, c) => {
+  console.error(e.message);
+  return c.text("An error occurred but don't worry about it.", 200);
 });
 
 // Catchall for unknown button clicks
