@@ -52,15 +52,15 @@ export function generateHistoryPrompt(history: ReceiptHistory): string {
   return `Patient names:\n${patientList}\n\nVendor names:\n${vendorList}`;
 }
 
-export function getReceiptsForYear(user_id: number, year: number): Promise<FullReceipt[]> {
+export async function getReceiptsForYear(user_id: number, year: number): Promise<FullReceipt[]> {
   const startDate = new Date(year, 0, 1);
   const endDate = new Date(year + 1, 0, 1);
 
-  return FullReceiptArraySchema.parseAsync(
-    prisma.receipt.findMany({
-      where: { user_id, processed: true, issue_date: { gte: startDate, lt: endDate } },
-    }),
-  );
+  const receipts = await prisma.receipt.findMany({
+    where: { user_id: user_id, processed: true, issue_date: { gte: startDate, lt: endDate } },
+  });
+
+  return FullReceiptArraySchema.parse(receipts);
 }
 
 // Function to generate a random string

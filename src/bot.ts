@@ -42,10 +42,19 @@ bot.use(myCommands);
 bot.command("whoami", (ctx) =>
   ctx.reply(`You are ${ctx.from?.username} - ${ctx.from?.id} - DB: ${ctx.session.dbuser_id}`),
 );
+bot.command("debug", (ctx) => ctx.reply(JSON.stringify(ctx.session, null, 2)));
 
 // Register the receiptScan conversation to start when a photo is received
 bot.use(ReceiptScanConvo);
 bot.on("message:photo", async (ctx) => await ctx.conversation.enter("receiptScan"));
+// Clear receipt from session on exit
+bot.use(
+  conversations({
+    onExit(id, ctx) {
+      delete ctx.session.current_receipt;
+    },
+  }),
+);
 
 // Register list of commands
 bot.api.setMyCommands([
@@ -58,28 +67,9 @@ bot.api.setMyCommands([
   },
 ]);
 
-// Setup webhook mode
-if (!process.env.WEBHOOK_URL) {
-  console.error("WEBHOOK_URL environment variable must be provided!");
-  process.exit(1);
-}
-const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
-await bot.api.setWebhook(webhookUrl);
-console.log(`Webhook registered at ${webhookUrl}`);
-
-// Serve the webhook with Hono
-const app = new Hono();
-
-app.use("/webhook", webhookCallback(bot, "hono"));
-
-app.get("/", async (c) => {
-  const userCount = await prisma.user.count();
-  return c.text(`ALIVE!\nUser count: ${userCount}`);
-});
-
-app.onError((e, c) => {
-  console.error(e.message);
-  return c.text("An error occurred but don't worry about it.", 200);
+// Catch simple text messages
+bot.on("message:text", async (ctx) => {
+  await ctx.reply("Send a picture of a receipt to save it or use one of the commands (see /start or /help).");
 });
 
 // Catchall for unknown button clicks
@@ -112,6 +102,30 @@ process.once("SIGINT", () => {
 process.once("SIGTERM", () => {
   bot.stop();
   exit();
+});
+
+// Setup webhook mode
+if (!process.env.WEBHOOK_URL) {
+  console.error("WEBHOOK_URL environment variable must be provided!");
+  process.exit(1);
+}
+const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
+await bot.api.setWebhook(webhookUrl);
+console.log(`Webhook registered at ${webhookUrl}`);
+
+// Serve the webhook with Hono
+const app = new Hono();
+
+app.use("/webhook", webhookCallback(bot, "hono"));
+
+app.get("/", async (c) => {
+  const userCount = await prisma.user.count();
+  return c.text(`ALIVE!\nUser count: ${userCount}`);
+});
+
+app.onError((e, c) => {
+  console.error(e.message);
+  return c.text("An error occurred but don't worry about it.", 200);
 });
 
 // Export the Hono webserver for Cloudflare Workers

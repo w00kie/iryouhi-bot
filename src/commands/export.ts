@@ -1,6 +1,5 @@
-import { InputFile } from "grammy";
-
-import { generateExcelFile } from "@/lib/excel";
+import { enqueueJob } from "@/lib/jobQueue";
+import { excelExportJob } from "@/lib/jobs/excel";
 import type { MyContext } from "@/types";
 
 export async function exportReceipts(ctx: MyContext): Promise<void> {
@@ -23,8 +22,9 @@ export async function exportReceipts(ctx: MyContext): Promise<void> {
   }
 
   await ctx.reply(`Exporting receipts for year ${year}...`);
-
-  const reportBuffer = await generateExcelFile(user_id, year);
-
-  await ctx.replyWithDocument(new InputFile(reportBuffer, `receipts_${year}.xlsx`));
+  enqueueJob({
+    type: "excelExport",
+    jobFunction: excelExportJob,
+    payload: { user_id, year, ctx },
+  });
 }

@@ -9,8 +9,9 @@ export interface SessionData {
   current_receipt?: Receipt;
 }
 
-export type MyContext = FileFlavor<Context & SessionFlavor<SessionData> & ConversationFlavor>;
-export type MyConversation = Conversation<MyContext>;
+export type MyContext = FileFlavor<ConversationFlavor<Context & SessionFlavor<SessionData>>>;
+export type MyConversationContext = FileFlavor<Context>;
+export type MyConversation = Conversation<MyContext, MyConversationContext>;
 
 export const ReceiptDataSchema = z.object({
   patient_name: z.string(),

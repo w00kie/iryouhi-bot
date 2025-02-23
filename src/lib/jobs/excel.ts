@@ -1,11 +1,9 @@
 import ExcelJS from "exceljs";
+import { InputFile } from "grammy";
 import path from "path";
 
-import prisma from "@/prismadb";
-import type { BillType } from "@/types";
-
-import { storeReportFile } from "./r2storage";
-import { getReceiptsForYear } from "./utils";
+import { getReceiptsForYear } from "@/lib/utils";
+import type { BillType, MyContext } from "@/types";
 
 const WORKSHEET_INDEX = 1;
 const START_ROW = 9;
@@ -30,11 +28,11 @@ function getBillTypeColumn(bill_type: string | null) {
   }
 }
 
-export async function generateExcelFile(user_id: number, year: number): Promise<Buffer> {
+async function generateExcelFile(user_id: number, year: number): Promise<Buffer> {
   const receipts = await getReceiptsForYear(user_id, year);
 
   const workbook = new ExcelJS.Workbook();
-  const templatePath = path.join(__dirname, "template", "iryouhi_form_v3.xlsx");
+  const templatePath = path.join(__dirname, "..", "template", "iryouhi_form_v3.xlsx");
   await workbook.xlsx.readFile(templatePath);
 
   const worksheet = workbook.getWorksheet(WORKSHEET_INDEX);
@@ -52,5 +50,16 @@ export async function generateExcelFile(user_id: number, year: number): Promise<
   });
 
   return workbook.xlsx.writeBuffer() as unknown as Buffer;
-  // return storeReportFile(reportBuffer, user_id, year);
+}
+
+interface ExcelExportJobPayload {
+  user_id: number;
+  year: number;
+  ctx: MyContext;
+}
+
+export async function excelExportJob(payload: ExcelExportJobPayload): Promise<void> {
+  // Generate the Excel file and send it to the user
+  const buffer = await generateExcelFile(payload.user_id, payload.year);
+  await payload.ctx.replyWithDocument(new InputFile(buffer, `receipts_${payload.year}.xlsx`));
 }
